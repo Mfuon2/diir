@@ -1,0 +1,29 @@
+/target/
+/dist/
+/artifacts/
+/.worktrees/
+
+# Local backlog-import records and scratch output are not application source.
+/backlog-import/
+/BACKLOG_IMPORT_PROGRESS.md
+
+# Local environment and signing material. Commit example configuration only.
+.env
+.env.*
+!.env.example
+/signing/
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+
+# Native build/debug output.
+*.dSYM/
+*.pdb
+
+# Editor and operating-system state.
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

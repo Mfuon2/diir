@@ -1,0 +1,16 @@
+[package]
+name = "diir-app"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "diir"
+path = "src/main.rs"
+
+[dependencies]
+diir-core.workspace = true
+gpui.workspace = true
+
+[lints]
+workspace = true
