@@ -6,13 +6,14 @@
 - Language and rendering: Rust + GPUI, using the exact published GPUI 0.2.2 API.
 - Default appearance: Frosted Glass; alternatives: Dracula, Monokai, and Windows Explorer.
 - Compact components, clean contrast, responsiveness, and bounded resource use take priority.
-- Scope: initialization only; no backlog acquisition or feature implementation.
+- Scope: application/appearance foundation plus the EX-001-T1 core navigation contract.
+  Live browsing, focus integration, and visible navigation errors belong to EX-001-T2.
 
 ## Boundaries
 
 | Layer | Owns | Must not own |
 | --- | --- | --- |
-| `diir-core` | Preferences and semantic design tokens; future domain behavior | GPUI, OS window handles, rendering |
+| `diir-core` | Preferences, semantic design tokens, native navigation state/resolution | GPUI, OS window handles, rendering |
 | App shell | Entities, action routing, window lifecycle, UI composition | Filesystem algorithms or long-running work |
 | Components | Small presentation functions and explicit callbacks | Global service access or hidden I/O |
 | Platform boundary | Blur policy and future OS-specific adapters | Product logic duplicated by OS |
@@ -20,7 +21,11 @@
 The app depends on the core, never the reverse. Additional crates and abstractions
 should follow actual requirements, rather than speculative plugin/service scaffolding.
 Future operations should publish bounded progress/state updates from background
-tasks to GPUI entities. Rendering consumes ready state only.
+tasks to GPUI entities. Rendering consumes ready state only. The core navigation contract is documented in
+[navigation.md](navigation.md): pure request/history transitions are separate from
+the synchronous filesystem resolver, which must run on a background worker. Each
+pane/tab owns its own state; opaque owner/generation tokens reject stale and
+foreign completions. Logical invalidation does not interrupt filesystem calls.
 
 ## Appearance
 

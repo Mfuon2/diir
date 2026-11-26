@@ -1,7 +1,9 @@
 # Diir
 
 A native, cross-platform desktop file explorer built with **Rust + GPUI**.
-This repository currently contains the application foundation, not file-explorer features.
+This repository contains the application foundation and a tested core navigation
+contract. The GUI remains an appearance preview; live directory browsing and
+visible navigation errors are not wired yet. See [navigation.md](docs/navigation.md).
 
 ## Start
 
