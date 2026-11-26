@@ -16,6 +16,10 @@
 *.pfx
 *.key
 *.mobileprovision
+*.pem
+*.cer
+__pycache__/
+*.pyc
 
 # Native build/debug output.
 *.dSYM/

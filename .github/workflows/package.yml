@@ -1,0 +1,144 @@
+name: Native packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  desktop:
+    name: Package ${{ matrix.platform }} ${{ matrix.architecture }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos
+            architecture: arm64
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            platform: macos
+            architecture: x86_64
+            target: x86_64-apple-darwin
+          - os: windows-2022
+            platform: windows
+            architecture: x86_64
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse signing script
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/sign-windows.ps1), [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count) { throw ($errors | Out-String) }
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Ensure Metal compiler is installed
+        if: runner.os == 'macOS'
+        run: |
+          if ! xcrun metal --version; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+          xcrun metal --version
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: package-${{ matrix.target }}
+      - name: Build native release binary
+        run: cargo build --release --locked -p diir-app --target ${{ matrix.target }}
+      - name: Inspect Windows DLL dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PACKAGE_TARGET: ${{ matrix.target }}
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $dumpbin = & $vswhere -latest -products '*' -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) { throw 'MSVC dumpbin was not found' }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          & $dumpbin /DEPENDENTS "target/$env:PACKAGE_TARGET/release/diir.exe" | Tee-Object -FilePath dist/windows-dependencies.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect Windows DLL dependencies' }
+      - name: Stage native payload
+        shell: bash
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_ARCHITECTURE: ${{ matrix.architecture }}
+          PACKAGE_TARGET: ${{ matrix.target }}
+        run: |
+          binary="target/$PACKAGE_TARGET/release/diir"
+          if [ "$PACKAGE_PLATFORM" = windows ]; then binary="$binary.exe"; fi
+          python scripts/package.py stage --platform "$PACKAGE_PLATFORM" --architecture "$PACKAGE_ARCHITECTURE" --binary "$binary"
+      - name: Validate and archive unsigned application
+        shell: bash
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_ARCHITECTURE: ${{ matrix.architecture }}
+        run: python scripts/package.py archive --stage "dist/stage/$PACKAGE_PLATFORM-$PACKAGE_ARCHITECTURE" --signing unsigned
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diir-${{ matrix.platform }}-${{ matrix.architecture }}-unsigned-${{ github.sha }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+            dist/*.json
+            dist/*dependencies.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    name: Package ${{ matrix.platform }} x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: debian
+            image: debian:13
+          - platform: fedora
+            image: fedora:45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build in the target distro
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/source" -w /source \
+            -e GITHUB_SHA -e CARGO_BUILD_JOBS \
+            "$PACKAGE_IMAGE" bash scripts/build-linux.sh "$PACKAGE_PLATFORM"
+      - name: Validate install and removal in a clean target distro
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/source:ro" -w /source \
+            "$PACKAGE_IMAGE" bash scripts/check-linux-package.sh "$PACKAGE_PLATFORM"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diir-${{ matrix.platform }}-x86_64-unsigned-${{ github.sha }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.sha256
+            dist/*.json
+            dist/*dependencies.txt
+          if-no-files-found: error
+          retention-days: 14

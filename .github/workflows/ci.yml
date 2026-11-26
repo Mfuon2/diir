@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
+        os: [ubuntu-24.04, macos-15, windows-2022]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -28,6 +28,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang cmake pkg-config libasound2-dev libfontconfig1-dev libfreetype6-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libssl-dev libzstd-dev libvulkan-dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Packaging behavior tests
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Ensure Metal compiler is installed
+        if: runner.os == 'macOS'
+        run: |
+          if ! xcrun metal --version; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+          xcrun metal --version
       - name: Install pinned Rust toolchain
         run: rustup show
       - uses: Swatinem/rust-cache@v2

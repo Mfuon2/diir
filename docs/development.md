@@ -75,3 +75,22 @@ The lockfile retains `libc 0.2.186` and `mio 1.2.0`. GPUI 0.2.2's
 initialization. Newer mio requires a newer libc, so both versions must move together.
 Do not run an unrestricted `cargo update` without repeating the native matrix.
 Prefer an upstream dependency fix when upgrading rather than modifying Cargo's cache.
+
+
+## Package validation
+
+Native package staging uses Python 3.11+ and standard-library code. See
+[packaging.md](packaging.md) for baselines, metadata, signing secrets, and install
+checks. The release workflows use macOS 15 Apple Silicon/Intel, Windows x64,
+Debian 13 amd64, and Fedora 45 x86-64.
+
+```sh
+python3 -m unittest discover -s scripts/tests -v
+# If installed locally:
+actionlint .github/workflows/*.yml
+shellcheck scripts/*.sh
+```
+
+Linux packages are built inside each distro, not converted from an Ubuntu binary.
+Signed workflows run only trusted main/release-tag commits and require real
+certificates; unsigned PR jobs never receive signing secrets.

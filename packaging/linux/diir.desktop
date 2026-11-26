@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Diir
+Comment=A native desktop file explorer
+Exec=diir
+Terminal=false
+Categories=System;FileTools;FileManager;
+StartupNotify=true

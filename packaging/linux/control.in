@@ -1,0 +1,11 @@
+Package: {package}
+Version: {version}-{revision}
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: {maintainer}
+Homepage: {homepage}
+Depends: {depends}
+Installed-Size: {installed_size}
+Description: {summary}
+ {description}

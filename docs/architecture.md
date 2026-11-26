@@ -48,4 +48,5 @@ integration remain future work.
 GPUI is pre-1.0. Use the published pinned release and its documentation/source,
 not assumptions from the upstream main branch. Upgrade in an explicit change with
 native matrix checks and a theme/window smoke test. Keep the dependency surface
-small. Do not impose a product license until the repository owner chooses one.
+small. The repository owner delegated the licensing choice for distribution;
+Diir uses Apache-2.0. Dependencies retain their own licenses.

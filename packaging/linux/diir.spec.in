@@ -1,0 +1,26 @@
+Name: {package}
+Version: {version}
+Release: {revision}%{{?dist}}
+Summary: {summary}
+License: {license}
+URL: {homepage}
+BuildArch: x86_64
+Requires: {requires}
+
+%description
+{description}
+
+%install
+mkdir -p %{{buildroot}}
+cp -a "%{{_sourcedir}}/payload/." %{{buildroot}}/
+
+%files
+/usr/bin/{binary}
+/usr/share/applications/{package}.desktop
+%license /usr/share/licenses/{package}/LICENSE
+%doc /usr/share/doc/{package}/THIRD_PARTY_NOTICES.txt
+%doc /usr/share/doc/{package}/build-manifest.json
+
+# Keep automatic ELF Requires enabled; this is a prebuilt, already stripped binary.
+%global debug_package %{{nil}}
+%global __brp_strip %{{nil}}

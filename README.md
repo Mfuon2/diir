@@ -59,8 +59,15 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 The included `Cargo.lock` records compatibility pins; use `--locked` for reproducible checks.
 CI checks all three operating systems. Passing a build does not replace a native
-interactive smoke test. Packaging, signing, auto-updates, persistent settings,
-and file operations are outside this initialization checkpoint.
+interactive smoke test. Native unsigned packages and separate trusted signing
+workflows are described in [packaging.md](docs/packaging.md). Signing requires
+certificates and successful verification; configuring a workflow is not a claim
+that signed artifacts have been produced. Auto-updates, persistent settings,
+and file operations remain outside this checkpoint.
 
 
 See [validation.md](docs/validation.md) for checks actually completed and remaining platform validation.
+
+
+Diir is licensed under [Apache-2.0](LICENSE). Packaged dependency notices preserve
+third-party license terms.
