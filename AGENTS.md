@@ -8,6 +8,7 @@
 
 ## Pull request delivery
 - Assign every pull request to **Mfuon2**.
+- Request GitHub reviews from **leemfo-re** and **mfuon** on every pull request.
 - Require a submitted GitHub review before merging; local review notes alone do not satisfy this requirement.
 - Finish acceptance checks and merge the current issue's PR before starting the next issue.
 
