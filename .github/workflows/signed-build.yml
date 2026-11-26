@@ -1,0 +1,117 @@
+name: Signed desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  signed:
+    name: Signed ${{ matrix.platform }} ${{ matrix.architecture }}
+    environment: release-signing
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos
+            architecture: arm64
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            platform: macos
+            architecture: x86_64
+            target: x86_64-apple-darwin
+          - os: windows-2022
+            platform: windows
+            architecture: x86_64
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require a trusted main commit and matching release version
+        shell: bash
+        env:
+          BUILD_REF: ${{ github.ref }}
+          BUILD_EVENT: ${{ github.event_name }}
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+          if [ "$BUILD_EVENT" = workflow_dispatch ] && [ "$BUILD_REF" != refs/heads/main ]; then
+            echo 'Manual signing must run from main' >&2
+            exit 1
+          fi
+          if [ "$BUILD_EVENT" = push ]; then
+            expected=$(python -c 'import tomllib; print("refs/tags/v" + tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+            [ "$BUILD_REF" = "$expected" ] || { echo 'Tag must match the Cargo application version' >&2; exit 1; }
+          fi
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Ensure Metal compiler is installed
+        if: runner.os == 'macOS'
+        run: |
+          if ! xcrun metal --version; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+          xcrun metal --version
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: signed-package-${{ matrix.target }}
+      - name: Build native release binary
+        run: cargo build --release --locked -p diir-app --target ${{ matrix.target }}
+      - name: Stage native payload and signed metadata
+        shell: bash
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_ARCHITECTURE: ${{ matrix.architecture }}
+          PACKAGE_TARGET: ${{ matrix.target }}
+        run: |
+          binary="target/$PACKAGE_TARGET/release/diir"
+          if [ "$PACKAGE_PLATFORM" = windows ]; then binary="$binary.exe"; fi
+          python scripts/package.py stage --platform "$PACKAGE_PLATFORM" --architecture "$PACKAGE_ARCHITECTURE" --binary "$binary"
+          python scripts/package.py prepare-signing --stage "dist/stage/$PACKAGE_PLATFORM-$PACKAGE_ARCHITECTURE"
+      - name: Sign and notarize macOS application
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          PACKAGE_ARCHITECTURE: ${{ matrix.architecture }}
+        run: bash scripts/sign-macos.sh "dist/stage/macos-$PACKAGE_ARCHITECTURE/Diir.app"
+      - name: Sign and verify Windows executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_SIGNER_THUMBPRINT: ${{ secrets.WINDOWS_SIGNER_THUMBPRINT }}
+        run: ./scripts/sign-windows.ps1 -Executable dist/stage/windows-x86_64/diir.exe
+      - name: Verify signatures and archive final application
+        shell: bash
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_ARCHITECTURE: ${{ matrix.architecture }}
+        run: python scripts/package.py archive --stage "dist/stage/$PACKAGE_PLATFORM-$PACKAGE_ARCHITECTURE" --signing signed
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diir-${{ matrix.platform }}-${{ matrix.architecture }}-signed-${{ github.sha }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+            dist/*.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,5 +1,11 @@
 # Diir — project instructions
 
+## Commit authorship
+- Use the repository owner's configured Git identity: **ML (Mfuon Leonard)**.
+- Do not add Claude, Codex, or any other AI agent as an author, committer, or co-author.
+- Do not add agent attribution or `Co-authored-by` trailers to commit messages, pull request descriptions, or release notes.
+- Preserve the owner's configured email address; do not invent an address from a display name.
+
 ## Product and scope
 - The application is **Diir**, a native desktop file explorer for macOS, Linux, and Windows.
 - The approved stack is **Rust + GPUI**. Do not introduce a webview or another UI framework.

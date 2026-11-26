@@ -1,0 +1,27 @@
+[application]
+name = "Diir"
+package = "diir"
+binary = "diir"
+bundle_identifier = "io.github.mfuon2.diir"
+maintainer = "Mfuon Leonard <leonard.mfuon@apollo.co.ke>"
+homepage = "https://github.com/Mfuon2/diir"
+summary = "A native desktop file explorer"
+description = "Diir is a Rust and GPUI desktop file explorer. This version provides the application and appearance foundation."
+license = "Apache-2.0"
+license_file = "LICENSE"
+revision = "1"
+
+[targets]
+macos_minimum = "15.0"
+debian = "13"
+fedora = "45"
+
+[signing]
+windows_timestamp_url = "http://timestamp.digicert.com"
+
+# Explicit runtime loads are not visible to dpkg-shlibdeps/rpm ELF analysis.
+# GPUI's Linux backends load Vulkan, Wayland/X11, and xkbcommon at runtime.
+[linux]
+debian_runtime = ["libvulkan1", "libwayland-client0", "libxkbcommon0", "libxkbcommon-x11-0", "libx11-6", "libxcb1", "libxcb-xkb1", "libfontconfig1", "libfreetype6", "libasound2t64", "fonts-dejavu-core"]
+# Fedora 45 ships Wayland's client library as a split runtime package.
+rpm_runtime = ["vulkan-loader", "libwayland-client", "libxkbcommon", "libxkbcommon-x11", "libX11", "libxcb", "fontconfig", "freetype", "alsa-lib", "dejavu-sans-fonts"]

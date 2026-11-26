@@ -62,3 +62,25 @@ per command with `DEVELOPER_DIR`. Installed Xcode's missing Metal toolchain.
 - Debug rebuild passed and the revised executable was launched on macOS. The
   native UI automation pipe failed to start, so menu clicking, visual theme
   switching, blur appearance, scaling, and backdrop checks remain unverified.
+
+
+## Native packaging infrastructure — 2026-11-25
+
+Baseline GitHub run [45652798188](https://github.com/Mfuon2/diir/actions/runs/45652798188)
+passed all format/core-test/check/Clippy/debug-link steps on Ubuntu 24.04 and
+Windows 2022. The macOS 14 job was cancelled because that runner is retired; this
+revision replaces it with supported macOS 15 and adds native package builds. That
+baseline is not a passing complete matrix.
+
+Local infrastructure checks: Python packaging unit tests, Python syntax checks,
+`actionlint`, and `shellcheck` passed. Actual native package/installer/signing
+results must be recorded after their jobs run. Real code-signing certificates and
+notarization credentials are not configured, so signing is **not validated**.
+No Linux graphical session or Windows/macOS cross-platform UI smoke test is
+claimed by package metadata or installation checks.
+
+An actual locally optimized Apple Silicon executable was staged into `Diir.app`,
+archived, and checked for bundle identifier, executable/license/notices/manifest
+payloads, SHA-256 integrity, and unsigned status. Its `otool -L` output contained
+only system framework/library paths. This is packaging validation, not a GUI or
+signing/notarization test.
