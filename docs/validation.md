@@ -84,3 +84,28 @@ archived, and checked for bundle identifier, executable/license/notices/manifest
 payloads, SHA-256 integrity, and unsigned status. Its `otool -L` output contained
 only system framework/library paths. This is packaging validation, not a GUI or
 signing/notarization test.
+
+## EX-001-T1 / issue #2 core navigation — 2026-11-26
+
+Environment: Apple Silicon macOS, pinned Rust 1.100.0 and GPUI 0.2.2.
+
+- Passed `cargo fmt --all --check`.
+- Passed `cargo test --locked -p diir-core`: 18 tests, including 14 navigation
+  state/path/error tests and the four existing settings/theme tests.
+- Passed all-target workspace `cargo check`, Clippy with `-D warnings`, and debug
+  app build, using full Xcode through `DEVELOPER_DIR` on this Mac.
+- Passed all 19 Python packaging regression tests; no packaging/workflow code or
+  dependency manifest/lockfile was changed by this task.
+- Actual local filesystem checks covered nested absolute/relative directories,
+  dot/dotdot traversal, missing/file targets, Unicode names, and Unix symlinks.
+  The local filesystem rejects creation of a `0xff` name (`EILSEQ`). Raw non-UTF-8
+  candidate/error paths remain preserved; successful non-UTF-8 directory traversal
+  is reserved for the Linux-native test, not claimed on this Mac.
+- PermissionDenied completion and recoverable display messages are tested
+  deterministically. No real chmod-denial coverage is claimed.
+- Fresh Linux/Windows native tests and the PR CI matrix have not run at this
+  local development checkpoint. Windows UNC tests cover syntax/error contracts,
+  not a successful SMB connection. No GUI error/focus check was performed.
+- This task implements only the core contract. Issue #3 owns visible GUI errors
+  and interaction/focus. Parent story #1 remains incomplete until its remaining
+  subtasks and end-to-end acceptance pass.

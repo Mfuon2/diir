@@ -1,10 +1,16 @@
 # Diir — project instructions
 
 ## Commit authorship
-- Use the repository owner's configured Git identity: **ML (Mfuon Leonard)**.
+- Use exactly **Mfuon Leonard <mfolee@gmail.com>** as commit author and committer.
 - Do not add Claude, Codex, or any other AI agent as an author, committer, or co-author.
 - Do not add agent attribution or `Co-authored-by` trailers to commit messages, pull request descriptions, or release notes.
 - Preserve the owner's configured email address; do not invent an address from a display name.
+
+## Pull request delivery
+- Assign every pull request to **Mfuon2**.
+- Request GitHub reviews from **leemfo-re** and **mfuon** on every pull request.
+- Require a submitted GitHub review before merging; local review notes alone do not satisfy this requirement.
+- Finish acceptance checks and merge the current issue's PR before starting the next issue.
 
 ## Product and scope
 - The application is **Diir**, a native desktop file explorer for macOS, Linux, and Windows.
