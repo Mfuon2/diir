@@ -20,9 +20,15 @@ constructor; its read-only path is absolute and canonical when resolution succee
 - Windows drive-relative paths such as `C:child` and root-relative paths such as
   `\child` are rejected as ambiguous. Fully qualified drive, UNC, and supported
   native-prefixed paths retain OS semantics; availability is decided by the OS.
-- Canonicalization follows physical filesystem resolution, including symlinks and
-  `..`; it does not lexically remove components before following links. This can
-  change display spelling and produce Windows extended path prefixes.
+- On Unix, canonicalization follows physical filesystem resolution, including
+  symlinks and `..`; components are not lexically removed before following links.
+- On Windows, relative input is joined using Rust's native `PathBuf` behavior.
+  Canonical locations commonly have a verbatim (`\\?\`) prefix; joining to such
+  a base normalizes `.` and `..` before filesystem access. For example,
+  `alias\..\target` becomes the base's `target`, without traversing `alias` first.
+  Unix physical symlink/`..` semantics are therefore not promised for this Windows
+  case. Final canonicalization still resolves the resulting candidate through the
+  OS and can change display spelling or retain extended path prefixes.
 - The resolved target must be a directory. A directory-enumeration handle is
   opened to establish initial access, then dropped without iterating the entries.
 - Shell expansion, environment variables, tilde shortcuts, and provider URLs are
@@ -98,8 +104,8 @@ Unix tests preserve non-UTF-8 bytes in candidates and recoverable error paths;
 Linux additionally creates and resolves an existing non-UTF-8 directory. The local
 macOS filesystem rejected creation of a `0xff` filename with `EILSEQ`, so successful
 non-UTF-8 directory traversal is not claimed there. Normal-name symlink traversal
-and physical `..` semantics are tested on Unix. Windows-gated tests cover native
-fully qualified/UNC syntax and ambiguous relative forms without requiring an SMB
+and physical `..` semantics are tested on Unix. Windows-gated tests cover verbatim
+base join normalization, native fully qualified/UNC syntax, and ambiguous relative forms without requiring an SMB
 server or administrator-only symlink creation. A recoverable synthetic UNC error
 checks error representation; it does not prove a successful network-share visit.
 

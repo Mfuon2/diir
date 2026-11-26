@@ -133,6 +133,8 @@ fn candidate_path(base: &Path, input: &Path) -> Result<PathBuf, NavigationError>
 ///
 /// Relative paths use the explicitly supplied absolute base. Canonicalization
 /// follows symlinks and keeps native OS path data, including Windows prefixes.
+/// Joining relative input to a Windows verbatim base normalizes dot components
+/// before filesystem access, following Rust's native PathBuf behavior.
 /// This is a synchronous worker boundary, not a UI-safe state operation.
 pub fn resolve_directory(base: &Path, input: &Path) -> Result<DirectoryLocation, NavigationError> {
     let attempted = candidate_path(base, input)?;
@@ -737,6 +739,29 @@ mod tests {
         assert_eq!(
             parent.path(),
             fs::canonicalize(fixture.0.join("physical")).unwrap()
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_canonical_verbatim_base_normalizes_relative_dot_components() {
+        use std::path::Prefix;
+        let fixture = TempDirectory::new();
+        fs::create_dir(fixture.0.join("target")).unwrap();
+        let base = fs::canonicalize(&fixture.0).unwrap();
+        assert!(matches!(
+            base.components().next(),
+            Some(Component::Prefix(prefix)) if matches!(
+                prefix.kind(),
+                Prefix::Verbatim(_) | Prefix::VerbatimDisk(_) | Prefix::VerbatimUNC(_, _)
+            )
+        ));
+        assert!(!fixture.0.join("alias").exists());
+        let input = Path::new(r"alias\..\target");
+        assert_eq!(candidate_path(&base, input).unwrap(), base.join("target"));
+        assert_eq!(
+            resolve_directory(&base, input).unwrap().path(),
+            fs::canonicalize(fixture.0.join("target")).unwrap()
         );
     }
 
